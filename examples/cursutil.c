@@ -8,6 +8,8 @@ int main(int argc, char *argv[]) {
 	keypad(stdscr, TRUE);
 	noecho();
 
+	char* name = jap_prompt("What's your name?", NULL);
+
 	char* title = "Which fruit do you like?";
 	const char *choices[46];
 	choices[0] = "Loganberry";
@@ -56,16 +58,17 @@ int main(int argc, char *argv[]) {
 	choices[43] = "Gandaria";
 	choices[44] = "Golden Apple";
 	choices[45] = "Genipap";
-	int choice = choice_index(title, choices, 46, 0);
+	int choice = jap_choice_index(title, choices, 46, 0);
 
 	curs_set(0);
 	clear();
 	if (choice == 3)
-		mvprintw(0, 0, "Nice! We have matching choices. We're pals.");
+		mvprintw(0, 0, "Nice, %s! We have matching choices. We're pals.", name);
 	else
-		mvprintw(0, 0, "You're weird!");
+		mvprintw(0, 0, "You're weird, %s!", name);
 	refresh();
 	getch();
 	endwin();
+	free(name);
 	return 0;
 }
