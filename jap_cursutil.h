@@ -31,7 +31,7 @@ int choice_index(const char* title, const char** choices, int nchoices,
         for(;;) {
 		clear();
 		getmaxyx(stdscr, sy, sx);
-		mvprintw(0, 0, "%s", title);
+		mvinsstr(0, 0, title);
 		while (choice < offset) {
 			offset -=5;
 			if (offset < 0) offset=0;
@@ -44,7 +44,7 @@ int choice_index(const char* title, const char** choices, int nchoices,
 
 		int ind = 0;
 		for (int i = offset; i < nchoices; i++) {
-			mvprintw(1+ind, 2, "%s", choices[i]);
+			mvinsstr(1+ind, 2, choices[i]);
 			ind++;
 		}
 
