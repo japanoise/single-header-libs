@@ -33,12 +33,15 @@
  *
  * The parser prioritises speed over accuracy, so has some limitations:
  *
+ * - Garbage in, garbage out - see the example program.
  * - Errors return the special value JAP_DICE_PARSERR.
- * - The parser only understands positive decimal integers in the range
- *   1-999. This should be enough for anything short of FATAL.
+ * - The parser only understands positive decimal integers.
  * - It follows the philosophy of wanting to return as soon as possible.
  * - It must be passed a proper null-terminated C-string or bad things will
  *   happen.
+ *
+ * Numbers parsed are limited to JAP_DICE_MAX (default 1000) to
+ * prevent overflows.
  *
  * To cache parser results, use the struct jap_diceroll. This is also
  * more reliable with errors.
@@ -47,7 +50,7 @@
 #ifndef _JAP_DICE_H
 #define _JAP_DICE_H 1
 
-typedef enum {DNDX, DFUDGE, DPLUS, DMINUS} jap_dice_type;
+typedef enum {DNDX, DFUDGE, DMAX, DMIN} jap_dice_type;
 
 typedef struct {
 	jap_dice_type type;
@@ -62,10 +65,10 @@ int jdice_ndx(int n, int x);
 int jdice_fudge(int n);
 
 /* Roll NdX and return the best roll */
-int jdice_plus(int n, int x);
+int jdice_max(int n, int x);
 
 /* Roll NdX and return the worst roll */
-int jdice_minus(int n, int x);
+int jdice_min(int n, int x);
 
 /* Parse the string s and put the parse result in roll; return 0 on
  * success, JAP_DICE_PARSERR otherwise. roll is nullable; if roll=null, the
@@ -84,9 +87,14 @@ int jdice_parse_and_roll(const char* s);
 #ifdef JAP_DICE_IMP
 
 #include <limits.h>
-#include <stdlib.h>
+#include <stdbool.h>
+
+#ifndef JAP_DICE_MAX
+#define JAP_DICE_MAX 1000
+#endif	/* JAP_DICE_MAX */
 
 #ifndef JAP_RAND
+#include <stdlib.h>
 #define JAP_RAND(x) (rand()%x)
 #endif	/* JAP_RAND */
 
@@ -106,7 +114,7 @@ int jdice_fudge(int n) {
 	return result;
 }
 
-int jdice_plus(int n, int x) {
+int jdice_max(int n, int x) {
 	int result = 0;
 	for (int i = 0; i < n; i++) {
 		int roll = JAP_RAND(x)+1;
@@ -116,7 +124,7 @@ int jdice_plus(int n, int x) {
 	return result;
 }
 
-int jdice_minus(int n, int x) {
+int jdice_min(int n, int x) {
 	int result = INT_MAX;
 	for (int i = 0; i < n; i++) {
 		int roll = JAP_RAND(x)+1;
@@ -127,39 +135,35 @@ int jdice_minus(int n, int x) {
 }
 
 int jdice_parse(const char* s, jap_diceroll* roll) {
-	char num[4] = {0,0,0,0};
-	int numpos=0;
+	int num = 0;
+	bool seenn = false;
 	jap_dice_type type = DNDX;
-	for (char* str = s; *str!=0; str++) {
+	for (const char* str = s; *str!=0; str++) {
 		char ch = *str;
 		switch (ch) {
 		case '+':
-			type = DPLUS;
+			type = DMAX;
 			break;
 		case '-':
-			type = DMINUS;
-			break;
-		case 'd':
-		parsen:
-			if(numpos == 0) return JAP_DICE_PARSERR;
-
-			int n = atoi(num);
-			if (n <= 0) return JAP_DICE_PARSERR;
-			num[0]=0;num[1]=0;num[2]=0;num[3]=0;
-			numpos = 0;
-
-			if (roll!=NULL) roll->n = n;
+			type = DMIN;
 			break;
 		case 'D':
 			if (roll!=NULL) {
 				roll->type = type;
 				roll->x = 6;
 			}
-			goto parsen;
+			/* fallthrough */
+		case 'd':
+			if(num == 0 || num > JAP_DICE_MAX) return JAP_DICE_PARSERR;
+
+			if (roll!=NULL) roll->n = num;
+			seenn = true;
+			num = 0;
 			break;
+		case 'f':
 		case 'F':
+			if (!seenn) return JAP_DICE_PARSERR;
 			if (roll != NULL) {
-				if (roll->n<=0) return JAP_DICE_PARSERR;
 				roll->type=DFUDGE;
 			}
 			return 0;
@@ -170,21 +174,18 @@ int jdice_parse(const char* s, jap_diceroll* roll) {
 			/* Ignore whitespace */
 			break;
 		default:
-			if ('0' <= ch && ch <= '9' && numpos <= 2) {
-				num[numpos] = ch;
-				numpos++;
+			if ('0' <= ch && ch <= '9') {
+				num = (10 * num) + (ch - '0');
 			} else {
 				return JAP_DICE_PARSERR;
 			}
 		}
 		if (ch=='D') return 0;
 	}
-	if(numpos == 0) return JAP_DICE_PARSERR;
+	if(num == 0 || num > JAP_DICE_MAX) return JAP_DICE_PARSERR;
 
-	int n = atoi(num);
-	if (n <= 0) return JAP_DICE_PARSERR;
 	if (roll!=NULL) {
-		roll->x = n;
+		roll->x = num;
 		roll->type = type;
 	}
 
@@ -197,10 +198,10 @@ int jdice_roll(jap_diceroll* roll) {
 		return jdice_ndx(roll->n, roll->x);
 	case DFUDGE:
 		return jdice_fudge(roll->n);
-	case DPLUS:
-		return jdice_plus(roll->n, roll->x);
+	case DMAX:
+		return jdice_max(roll->n, roll->x);
 	default:
-		return jdice_minus(roll->n, roll->x);
+		return jdice_min(roll->n, roll->x);
 	}
 }
 
