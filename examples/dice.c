@@ -8,6 +8,9 @@ int parsetest(char* dice) {
 	int res;
 
 	printf("Parsing %s...\n", dice);
+	if (jdice_parse(dice, NULL)) {
+		printf("Failed parser dry run for %s\n", dice);
+	}
 	res = jdice_parse(dice, &roll);
 	if (res) {
 		printf("Couldn't parse %s\n", dice);
@@ -24,6 +27,7 @@ int main() {
 	parsetest("2d10");
 	parsetest("3D");
 	parsetest("4dF");
+	parsetest("4df");
 	parsetest("+2d20");
 	parsetest("-3d10");
 	printf("\nThese should fail.\n");
