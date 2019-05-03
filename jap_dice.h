@@ -134,17 +134,40 @@ int jdice_min(int n, int x) {
 	return result;
 }
 
+// Internal helper function: asserts that the string contains only whitespace.
+// Returns 0 on success, or else JAP_DICE_PARSERR.
+static int jdice__whitespace_or_error(const char* s) {
+	char c;
+	while ((c = *s++) != 0) {
+		switch (c) {
+			case ' ':
+			case '\t':
+			case '\n':
+			case '\r':
+				break;
+			default:
+				return JAP_DICE_PARSERR;
+		}
+	}
+
+	return 0;
+}
+
 int jdice_parse(const char* s, jap_diceroll* roll) {
 	int num = 0;
 	bool seenn = false;
+	bool firstchr = true;
 	jap_dice_type type = DNDX;
 	for (const char* str = s; *str!=0; str++) {
 		char ch = *str;
+		bool whitespace = false;
 		switch (ch) {
 		case '+':
+			if (!firstchr) return JAP_DICE_PARSERR;
 			type = DMAX;
 			break;
 		case '-':
+			if (!firstchr) return JAP_DICE_PARSERR;
 			type = DMIN;
 			break;
 		case 'D':
@@ -154,7 +177,7 @@ int jdice_parse(const char* s, jap_diceroll* roll) {
 			}
 			/* fallthrough */
 		case 'd':
-			if(num == 0 || num > JAP_DICE_MAX) return JAP_DICE_PARSERR;
+			if(num == 0 || num > JAP_DICE_MAX || seenn) return JAP_DICE_PARSERR;
 
 			if (roll!=NULL) roll->n = num;
 			seenn = true;
@@ -162,16 +185,17 @@ int jdice_parse(const char* s, jap_diceroll* roll) {
 			break;
 		case 'f':
 		case 'F':
-			if (!seenn) return JAP_DICE_PARSERR;
+			if (!seenn || type != DNDX) return JAP_DICE_PARSERR;
 			if (roll != NULL) {
 				roll->type=DFUDGE;
 			}
-			return 0;
+			return jdice__whitespace_or_error(str + 1);
 		case ' ':
 		case '\t':
 		case '\n':
 		case '\r':
 			/* Ignore whitespace */
+			whitespace = true;
 			break;
 		default:
 			if ('0' <= ch && ch <= '9') {
@@ -180,9 +204,10 @@ int jdice_parse(const char* s, jap_diceroll* roll) {
 				return JAP_DICE_PARSERR;
 			}
 		}
-		if (ch=='D') return 0;
+		if (ch=='D') return jdice__whitespace_or_error(str + 1);
+		if (!whitespace) firstchr = false;
 	}
-	if(num == 0 || num > JAP_DICE_MAX) return JAP_DICE_PARSERR;
+	if(num == 0 || num > JAP_DICE_MAX || !seenn) return JAP_DICE_PARSERR;
 
 	if (roll!=NULL) {
 		roll->x = num;
