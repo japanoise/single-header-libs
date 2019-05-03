@@ -136,7 +136,7 @@ int jdice_min(int n, int x) {
 
 // Internal helper function: asserts that the string contains only whitespace.
 // Returns 0 on success, or else JAP_DICE_PARSERR.
-int jdice__whitespace_or_error(const char* s) {
+static int jdice__whitespace_or_error(const char* s) {
 	char c;
 	while ((c = *s++) != 0) {
 		switch (c) {
