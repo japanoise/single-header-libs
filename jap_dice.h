@@ -58,6 +58,8 @@ typedef struct {
 	int x;
 } jap_diceroll;
 
+typedef void (*jdice_func)(int);
+
 /* Roll NdX and return the sum */
 int jdice_ndx(int n, int x);
 
@@ -70,6 +72,19 @@ int jdice_max(int n, int x);
 /* Roll NdX and return the worst roll */
 int jdice_min(int n, int x);
 
+/* Roll NdX and return the sum; call a function on each roll */
+int jdice_ndx_roll(int n, int x, jdice_func f);
+
+/* Roll NdF and return the number of pluses (positive)/minuses
+ * (negative); call a function on each roll */
+int jdice_fudge_roll(int n, jdice_func f);
+
+/* Roll NdX and return the best roll; call a function on each roll */
+int jdice_max_roll(int n, int x, jdice_func f);
+
+/* Roll NdX and return the worst roll; call a function on each roll */
+int jdice_min_roll(int n, int x, jdice_func f);
+
 /* Parse the string s and put the parse result in roll; return 0 on
  * success, JAP_DICE_PARSERR otherwise. roll is nullable; if roll=null, the
  * function will do a dry run. */
@@ -77,6 +92,9 @@ int jdice_parse(const char* s, jap_diceroll* roll);
 
 /* Roll the dice described in roll */
 int jdice_roll(jap_diceroll* roll);
+
+/* Roll the dice described in roll; call a function on each roll */
+int jdice_roll_func(jap_diceroll* roll, jdice_func f);
 
 /* Parse the string s and roll immediately. Return JAP_DICE_PARSERR if
  * parser error. */
@@ -128,6 +146,48 @@ int jdice_min(int n, int x) {
 	int result = INT_MAX;
 	for (int i = 0; i < n; i++) {
 		int roll = JAP_RAND(x)+1;
+		if (roll < result)
+			result = roll;
+	}
+	return result;
+}
+
+int jdice_ndx_func(int n, int x, jdice_func f) {
+	int result = 0;
+	for (int i = 0; i < n; i++) {
+		int roll = JAP_RAND(x)+1;
+		f(roll);
+		result += roll;
+	}
+	return result;
+}
+
+int jdice_fudge_func(int n, jdice_func f) {
+	int result = 0;
+	for (int i = 0; i < n; i++) {
+		int roll = JAP_RAND(3)-1;
+		f(roll);
+		result += roll;
+	}
+	return result;
+}
+
+int jdice_max_func(int n, int x, jdice_func f) {
+	int result = 0;
+	for (int i = 0; i < n; i++) {
+		int roll = JAP_RAND(x)+1;
+		f(roll);
+		if (roll > result)
+			result = roll;
+	}
+	return result;
+}
+
+int jdice_min_func(int n, int x, jdice_func f) {
+	int result = INT_MAX;
+	for (int i = 0; i < n; i++) {
+		int roll = JAP_RAND(x)+1;
+		f(roll);
 		if (roll < result)
 			result = roll;
 	}
@@ -227,6 +287,19 @@ int jdice_roll(jap_diceroll* roll) {
 		return jdice_max(roll->n, roll->x);
 	default:
 		return jdice_min(roll->n, roll->x);
+	}
+}
+
+int jdice_roll_func(jap_diceroll* roll, jdice_func f) {
+	switch (roll->type) {
+	case DNDX:
+		return jdice_ndx_func(roll->n, roll->x, f);
+	case DFUDGE:
+		return jdice_fudge_func(roll->n, f);
+	case DMAX:
+		return jdice_max_func(roll->n, roll->x, f);
+	default:
+		return jdice_min_func(roll->n, roll->x, f);
 	}
 }
 
