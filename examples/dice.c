@@ -21,11 +21,11 @@ int parsetest(char* dice) {
 	return 0;
 }
 
-void print_roll(int n) {
+void print_roll(int n, void* closure) {
 	printf("%i, ", n);
 }
 
-void print_roll_signed(int n) {
+void print_roll_signed(int n, void* closure) {
 	printf("%+i, ", n);
 }
 
@@ -56,24 +56,24 @@ int main() {
 
 	printf("\nI'm going to roll 100d6.\n");
 	jdice_parse("100d6", &roll);
-	res = jdice_roll_func(&roll, print_roll);
+	res = jdice_roll_func(&roll, print_roll, NULL);
 	printf("total: %i\n", res);
 
 	printf("\nNow let's try 10dF.\n");
 	jdice_parse("10dF", &roll);
-	res = jdice_roll_func(&roll, print_roll_signed);
+	res = jdice_roll_func(&roll, print_roll_signed, NULL);
 	printf("total: %i\n", res);
 
 	printf("\nTest of +2d20...\n");
 	srand(6969);
 	jdice_parse("+2d20", &roll);
-	res = jdice_roll_func(&roll, print_roll);
+	res = jdice_roll_func(&roll, print_roll, NULL);
 	printf("result: %i\n", res);
 
 	printf("\nSame for -2d20...\n");
 	srand(6969);
 	jdice_parse("-2d20", &roll);
-	res = jdice_roll_func(&roll, print_roll);
+	res = jdice_roll_func(&roll, print_roll, NULL);
 	printf("result: %i\n", res);
 	return 0;
 }
