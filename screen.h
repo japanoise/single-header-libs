@@ -179,8 +179,8 @@ static void die(const char *s) {
 /* Print the CSI sequence ESC [ */
 #define CSI ESC; QPUTC('[')
 
-/* Call CPU quickly with two chars */
-#define CUPRICE(x, y) CSI; QPUTC(x); QPUTC(y); QPUTC('h')
+/* Call CUP quickly with two chars */
+#define CUPRICE(x, y) CSI; QPUTC(y); QPUTC(;) QPUTC(x); QPUTC('H')
 
 /* Flush stdout */
 #define DOFLUSH fflush(stdout)
